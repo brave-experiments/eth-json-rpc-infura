@@ -95,9 +95,11 @@ const fetchConfigFromReq = ({ network, req, source }) => {
 
   const { method, params } = cleanReq
   const isPostMethod = postMethods.includes(method)
-  const projectId = process.env.BRAVE_INFURA_PROJECT_ID
+  let fetchUrl = `https://${network}.infura.io/v3/`
 
-  let fetchUrl = `https://${network}.infura.io/v3/${projectId}`
+  chrome.braveRewards.getProjectID((projectId) => {
+    fetchUrl += projectId
+  })
 
   if (isPostMethod) {
     fetchParams.method = 'POST'
