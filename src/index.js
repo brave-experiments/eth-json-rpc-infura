@@ -97,7 +97,7 @@ const fetchConfigFromReq = ({ network, req, source }) => {
   const isPostMethod = postMethods.includes(method)
   let fetchUrl = `https://${network}.infura.io/v3/`
 
-  chrome.braveRewards.getProjectID((projectId) => {
+  chrome.braveWallet.getProjectID((projectId) => {
     fetchUrl += projectId
   })
 
