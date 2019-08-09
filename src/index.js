@@ -10,10 +10,16 @@ const RETRIABLE_ERRORS = [
   'SyntaxError',
 ]
 
+let BRAVE_INFURA_PROJECT_ID = ''
+
 const createInfuraMiddleware = (opts = {}) => {
   const network = opts.network || 'mainnet'
   const maxAttempts = opts.maxAttempts || 5
   const source = opts.source
+
+  chrome.braveWallet.getProjectID((projectId) => {
+    BRAVE_INFURA_PROJECT_ID = projectId
+  })
 
   if (!maxAttempts) {
     throw new Error(`Invalid value for 'maxAttempts': "${maxAttempts}" (${typeof maxAttempts})`)
@@ -95,11 +101,7 @@ const fetchConfigFromReq = ({ network, req, source }) => {
 
   const { method, params } = cleanReq
   const isPostMethod = postMethods.includes(method)
-  let fetchUrl = `https://${network}.infura.io/v3/`
-
-  chrome.braveWallet.getProjectID((projectId) => {
-    fetchUrl += projectId
-  })
+  let fetchUrl = `https://${network}.infura.io/v3/${BRAVE_INFURA_PROJECT_ID}`
 
   if (isPostMethod) {
     fetchParams.method = 'POST'
