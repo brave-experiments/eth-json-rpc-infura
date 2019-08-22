@@ -9,8 +9,11 @@ const RETRIABLE_ERRORS = [
   'ECONNRESET',
   'SyntaxError',
 ]
+const GET_BLOCK_INTERVAL = 2000
 
+let lastBlock = {}
 let BRAVE_INFURA_PROJECT_ID = ''
+let lastBlockTimestamp = new Date().getTime()
 
 const createInfuraMiddleware = (opts = {}) => {
   const network = opts.network || 'mainnet'
@@ -28,7 +31,9 @@ const createInfuraMiddleware = (opts = {}) => {
   return createAsyncMiddleware(async (req, res, _next) => {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        await performFetch(network, req, res, source)
+        if (shouldPerformFetch(req, res, shouldCacheBlock)) {
+          await performFetch(network, req, res, source)
+        }
         break
       } catch (err) {
         const canRetry = RETRIABLE_ERRORS.some(phrase => err.toString().includes(phrase))
@@ -52,6 +57,29 @@ const createInfuraMiddleware = (opts = {}) => {
       }
     }
   })
+}
+
+const shouldCacheBlock = (curr, last, int) => {
+  return ((curr - last) < int)
+}
+
+const shouldPerformFetch = (req, res, cfunc) => {
+  if (req.method === 'eth_getBlockByNumber') {
+    const currentTimestamp = new Date().getTime()
+    const shouldCache = cfunc(
+      currentTimestamp,
+      lastBlockTimestamp,
+      GET_BLOCK_INTERVAL
+    )
+    if (shouldCache) {
+      lastBlockTimestamp = currentTimestamp
+      res.result = lastBlock.result
+      res.error = lastBlock.error
+      return false
+    }
+  }
+
+  return true
 }
 
 const performFetch = async (network, req, res, source) => {
@@ -84,6 +112,10 @@ const performFetch = async (network, req, res, source) => {
   const data = JSON.parse(rawData)
   res.result = data.result
   res.error = data.error
+
+  if (req.method === 'eth_getBlockByNumber') {
+    lastBlock = { ...data }
+  }
 }
 
 const createInternalError = (msg) => new JsonRpcError.InternalError(new Error(msg))
@@ -127,3 +159,4 @@ const fetchConfigFromReq = ({ network, req, source }) => {
 
 module.exports = createInfuraMiddleware
 module.exports.fetchConfigFromReq = fetchConfigFromReq
+module.exports.shouldPerformFetch = shouldPerformFetch
