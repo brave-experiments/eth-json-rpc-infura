@@ -10,12 +10,17 @@ test('fetchConfigFromReq - basic', (t) => {
   }
 
   const { fetchUrl, fetchParams } = fetchConfigFromReq({ network, req, source:'eth-json-rpc-infura' })
-  t.equals(fetchUrl, 'https://api.infura.io/v1/jsonrpc/mainnet/eth_getBlockByNumber?params=%5B%220x482103%22%2Ctrue%5D')
+  t.equals(fetchUrl, 'https://mainnet-infura.brave.com/')
   t.deepEquals(fetchParams, { 
-    method: 'GET',     
+    method: 'POST',     
     headers: {
-    'Infura-Source': 'eth-json-rpc-infura/internal'
-    }, 
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Infura-Source': 'eth-json-rpc-infura/internal',
+      'X-Eth-Get-Block': '0x482103,true',
+      'X-Eth-Method': 'eth_getBlockByNumber',
+    },
+    body: '{"method":"eth_getBlockByNumber","params":["0x482103",true]}'
   })
   t.end()
 
@@ -30,9 +35,16 @@ test('fetchConfigFromReq - basic: no source specified', (t) => {
   }
 
   const { fetchUrl, fetchParams } = fetchConfigFromReq({ network, req })
-  t.equals(fetchUrl, 'https://api.infura.io/v1/jsonrpc/mainnet/eth_getBlockByNumber?params=%5B%220x482103%22%2Ctrue%5D')
+  t.equals(fetchUrl, 'https://mainnet-infura.brave.com/')
   t.deepEquals(fetchParams, { 
-    method: 'GET',
+    method: 'POST',     
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'X-Eth-Get-Block': '0x482103,true',
+      'X-Eth-Method': 'eth_getBlockByNumber',
+    },
+    body: '{"method":"eth_getBlockByNumber","params":["0x482103",true]}'
   })
   t.end()
 
@@ -48,13 +60,14 @@ test('fetchConfigFromReq - basic', (t) => {
   }
 
   const { fetchUrl, fetchParams } = fetchConfigFromReq({ network, req, source:'eth-json-rpc-infura' })
-  t.equals(fetchUrl, 'https://api.infura.io/v1/jsonrpc/ropsten')
+  t.equals(fetchUrl, 'https://ropsten-infura.brave.com/')
   t.deepEquals(fetchParams, {
     method: 'POST',
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
-      'Infura-Source': 'eth-json-rpc-infura/internal'
+      'X-Eth-Method': 'eth_sendRawTransaction',
+      'Infura-Source': 'eth-json-rpc-infura/internal',
     },
     body: JSON.stringify(req),
   })
@@ -73,7 +86,7 @@ test('fetchConfigFromReq - strip non-standard keys', (t) => {
   }
 
   const { fetchUrl, fetchParams } = fetchConfigFromReq({ network, req })
-  t.equals(fetchUrl, 'https://api.infura.io/v1/jsonrpc/ropsten')
+  t.equals(fetchUrl, 'https://ropsten-infura.brave.com/')
   const parsedReq = JSON.parse(fetchParams.body)
   t.notOk('origin' in parsedReq, 'non-standard key removed from req')
   t.end()
@@ -90,16 +103,57 @@ test('fetchConfigFromReq - source specified for request origin in header', (t) =
   }
 
   const { fetchUrl, fetchParams } = fetchConfigFromReq({ network, req, source:'eth-json-rpc-infura' })
-  t.equals(fetchUrl, 'https://api.infura.io/v1/jsonrpc/ropsten')
+  t.equals(fetchUrl, 'https://ropsten-infura.brave.com/')
   t.deepEquals(fetchParams, {
     method: 'POST',
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
-      'Infura-Source': 'eth-json-rpc-infura/happydapp.eth'
+      'X-Eth-Method': 'eth_sendRawTransaction',
+      'Infura-Source': 'eth-json-rpc-infura/happydapp.eth',
     },
     body: fetchParams.body,
   })
   t.end()
 
+})
+
+test('fetchConfigFromReq - using cacheable eth methods (eth_getBlockByNumber)', (t) => {
+  const network = 'mainnet'
+  const req = {
+    method: 'eth_getBlockByNumber',
+    params: ['0x482154', true],
+  }
+
+  const { fetchParams } = fetchConfigFromReq({ network, req, source:'eth-json-rpc-infura' })
+  t.equals(fetchParams.headers['X-Eth-Get-Block'], '0x482154,true')
+  t.end()
+})
+
+test('fetchConfigFromReq - using cacheable eth methods (eth_getBlockByNumber)', (t) => {
+  const network = 'ropsten'
+  const req = {
+    id: 7447831221130463,
+    method: 'eth_blockNumber',
+    jsonrpc: '2.0',
+    origin: 'MetaMask',
+  }
+
+  const { fetchParams } = fetchConfigFromReq({ network, req, source:'eth-json-rpc-infura' })
+  t.equals(fetchParams.headers['X-Eth-Block'], 'true')
+  t.end()
+})
+
+test('fetchConfigFromReq - using no cacheable eth methods', (t) => {
+  const network = 'ropsten'
+  const req = {
+    method: 'eth_sendRawTransaction',
+    params: ['0x0102030405060708090a0b0c0d0e0f'],
+    origin: 'happydapp.eth',
+  }
+
+  const { fetchParams } = fetchConfigFromReq({ network, req, source:'eth-json-rpc-infura' })
+  t.equals(fetchParams.hasOwnProperty('X-Eth-Get-Block'), false)
+  t.equals(fetchParams.hasOwnProperty('X-Eth-Block'), false)
+  t.end()
 })
