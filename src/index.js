@@ -88,6 +88,17 @@ const performFetch = async (network, req, res, source) => {
 
 const createInternalError = (msg) => new JsonRpcError.InternalError(new Error(msg))
 
+const getCacheHeader = (method) => {
+  switch (method) {
+    case 'eth_getBlockByNumber':
+      return 'X-Eth-Get-Block'
+    case 'eth_blockNumber':
+      return 'X-Eth-Block'
+    default:
+      return null
+  }
+}
+
 const fetchConfigFromReq = ({ network, req, source }) => {
   const fetchParams = {}
   const requestOrigin = req.origin || 'internal'
@@ -110,6 +121,12 @@ const fetchConfigFromReq = ({ network, req, source }) => {
       'Content-Type': 'application/json',
       ...(source ? {'Infura-Source': `${source}/${requestOrigin}`} : {}),
     }
+
+    const cacheHeader = getCacheHeader(method)
+    if (cacheHeader) {
+      fetchParams.headers[cacheHeader] = 'true'
+    }
+
     fetchParams.body = JSON.stringify(cleanReq)
   } else {
     fetchParams.method = 'GET'
