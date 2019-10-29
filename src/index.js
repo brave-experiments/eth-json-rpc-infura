@@ -88,6 +88,23 @@ const performFetch = async (network, req, res, source) => {
 
 const createInternalError = (msg) => new JsonRpcError.InternalError(new Error(msg))
 
+const getCacheHeader = (method, req) => {
+  switch (method) {
+    case 'eth_getBlockByNumber':
+      return [
+        'X-Eth-Get-Block',
+        req.params.toString()
+      ]
+    case 'eth_blockNumber':
+      return [
+        'X-Eth-Block',
+        'true'
+      ]
+    default:
+      return null
+  }
+}
+
 const fetchConfigFromReq = ({ network, req, source }) => {
   const fetchParams = {}
   const requestOrigin = req.origin || 'internal'
@@ -101,15 +118,22 @@ const fetchConfigFromReq = ({ network, req, source }) => {
 
   const { method, params } = cleanReq
   const isPostMethod = postMethods.includes(method)
-  let fetchUrl = `https://${network}.infura.io/v3/${BRAVE_INFURA_PROJECT_ID}`
+  let fetchUrl = `https://${network}-infura.brave.com/${BRAVE_INFURA_PROJECT_ID}`
 
   if (isPostMethod) {
     fetchParams.method = 'POST'
     fetchParams.headers = {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
+      'X-Eth-Method': method,
       ...(source ? {'Infura-Source': `${source}/${requestOrigin}`} : {}),
     }
+
+    const cacheHeader = getCacheHeader(method, cleanReq)
+    if (cacheHeader) {
+      fetchParams.headers[cacheHeader[0]] = cacheHeader[1]
+    }
+
     fetchParams.body = JSON.stringify(cleanReq)
   } else {
     fetchParams.method = 'GET'
