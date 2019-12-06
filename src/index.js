@@ -1,11 +1,6 @@
-<<<<<<< HEAD
-const createAsyncMiddleware = require('json-rpc-engine/src/createAsyncMiddleware')
 const { errors: rpcErrors } = require('eth-json-rpc-errors')
-=======
->>>>>>> Rewriting middleware to use Brave's infura endpoint
 const fetch = require('cross-fetch')
 const postMethods = require('./postMethods')
-const JsonRpcError = require('json-rpc-error')
 const createAsyncMiddleware = require('json-rpc-engine/src/createAsyncMiddleware')
 
 const RETRIABLE_ERRORS = [
@@ -90,8 +85,6 @@ const performFetch = async (network, req, res, source) => {
   res.result = data.result
   res.error = data.error
 }
-
-const createInternalError = (msg) => new JsonRpcError.InternalError(new Error(msg))
 
 const getCacheHeader = (method, req) => {
   switch (method) {
