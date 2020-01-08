@@ -12,20 +12,29 @@ const RETRIABLE_ERRORS = [
 
 let BRAVE_INFURA_PROJECT_ID = ''
 
+const setProjectId = () => {
+  return new Promise((resolve) => {
+    chrome.braveWallet.getProjectID((projectId) => {
+      BRAVE_INFURA_PROJECT_ID = projectId
+      resolve()
+    })
+  })
+}
+
 const createInfuraMiddleware = (opts = {}) => {
   const network = opts.network || 'mainnet'
   const maxAttempts = opts.maxAttempts || 5
   const source = opts.source
-
-  chrome.braveWallet.getProjectID((projectId) => {
-    BRAVE_INFURA_PROJECT_ID = projectId
-  })
 
   if (!maxAttempts) {
     throw new Error(`Invalid value for 'maxAttempts': "${maxAttempts}" (${typeof maxAttempts})`)
   }
 
   return createAsyncMiddleware(async (req, res, _next) => {
+    if (!BRAVE_INFURA_PROJECT_ID) {
+      await setProjectId()
+    }
+
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         await performFetch(network, req, res, source)
