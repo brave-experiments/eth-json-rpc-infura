@@ -10,12 +10,26 @@ const RETRIABLE_ERRORS = [
   'SyntaxError',
 ]
 
+let BRAVE_KEY = ''
 let BRAVE_INFURA_PROJECT_ID = ''
 
 const setProjectId = () => {
   return new Promise((resolve) => {
     chrome.braveWallet.getProjectID((projectId) => {
       BRAVE_INFURA_PROJECT_ID = projectId
+      resolve()
+    })
+  })
+}
+
+const setBraveKey = () => {
+  return new Promise((resolve) => {
+    if (!('getBraveKey' in chrome.braveWallet)) {
+      resolve()
+    }
+
+    chrome.braveWallet.getBraveKey((key) => {
+      BRAVE_KEY = key
       resolve()
     })
   })
@@ -33,6 +47,10 @@ const createInfuraMiddleware = (opts = {}) => {
   return createAsyncMiddleware(async (req, res, _next) => {
     if (!BRAVE_INFURA_PROJECT_ID) {
       await setProjectId()
+    }
+
+    if (!BRAVE_KEY) {
+      await setBraveKey()
     }
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -139,6 +157,10 @@ const fetchConfigFromReq = ({ network, req, source }) => {
     const cacheHeader = getCacheHeader(method, cleanReq)
     if (cacheHeader) {
       fetchParams.headers[cacheHeader[0]] = cacheHeader[1]
+    }
+
+    if (BRAVE_KEY) {
+      fetchParams.headers['x-brave-key'] = BRAVE_KEY
     }
 
     fetchParams.body = JSON.stringify(cleanReq)
