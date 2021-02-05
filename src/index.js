@@ -55,7 +55,7 @@ const createInfuraMiddleware = (opts = {}) => {
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        await performFetch(network, req, res, source)
+        await performFetch(network, req, res, source, opts.dev)
         break
       } catch (err) {
         const canRetry = RETRIABLE_ERRORS.some(phrase => err.toString().includes(phrase))
@@ -81,8 +81,8 @@ const createInfuraMiddleware = (opts = {}) => {
   })
 }
 
-const performFetch = async (network, req, res, source) => {
-  const { fetchUrl, fetchParams } = fetchConfigFromReq({ network, req, source })
+const performFetch = async (network, req, res, source, dev) => {
+  const { fetchUrl, fetchParams } = fetchConfigFromReq({ network, req, source, dev })
   const response = await fetch(fetchUrl, fetchParams)
   const rawData = await response.text()
 
@@ -130,7 +130,7 @@ const getCacheHeader = (method, req) => {
   }
 }
 
-const fetchConfigFromReq = ({ network, req, source }) => {
+const fetchConfigFromReq = ({ network, req, source, dev }) => {
   const fetchParams = {}
   const requestOrigin = req.origin || 'internal'
 
@@ -143,7 +143,8 @@ const fetchConfigFromReq = ({ network, req, source }) => {
 
   const { method, params } = cleanReq
   const isPostMethod = postMethods.includes(method)
-  let fetchUrl = `https://${network}-infura.brave.com/${BRAVE_INFURA_PROJECT_ID}`
+  const host = dev ? 'staging-infura.bravesoftware' : 'infura.brave'
+  let fetchUrl = `https://${network}-${host}.com/${BRAVE_INFURA_PROJECT_ID}`
 
   if (isPostMethod) {
     fetchParams.method = 'POST'
