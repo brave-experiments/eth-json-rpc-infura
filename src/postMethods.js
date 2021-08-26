@@ -4,6 +4,7 @@ module.exports = [
   'eth_call',
   'eth_chainId',
   'eth_estimateGas',
+  'eth_feeHistory',
   'eth_gasPrice',
   'eth_getBalance',
   'eth_getBlockByHash',
