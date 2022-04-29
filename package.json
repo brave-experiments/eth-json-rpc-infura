@@ -6,7 +6,7 @@
     "test": "test"
   },
   "dependencies": {
-    "cross-fetch": "^2.1.1",
+    "cross-fetch": "^3.1.5",
     "eth-json-rpc-errors": "^1.0.1",
     "eth-json-rpc-middleware": "^4.1.4",
     "json-rpc-engine": "^5.1.3"
